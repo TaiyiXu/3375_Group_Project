@@ -47,6 +47,12 @@ void startTimer()
     timer->status = 1;             // set the time-out flag to 0
 }
 
+char getRemainTime(int count)
+{ // getting the seconds of how many time are left until the light turn
+    char remainTime = 600 - count;
+    return remainTime;
+}
+
 // PIR////////////////////////////////////////////////////////////////
 
 // LEDS////////////////////////////////////////////////////////////////
@@ -74,6 +80,9 @@ void lightDisplay(int value)
 int main(void)
 {
     *(gpio_ptr + 1) = 0; // enbale the input for GPIO
+    init_spim0();
+    init_lcd();
+    clear_screen();
 
     while (1)
     {
@@ -88,7 +97,9 @@ int main(void)
                 startTimer();
                 lightDisplay(1);
                 count++;
-
+                LCD_text(lights_on, 0);
+                LCD_text(getRemainTime(count), 1);
+                refresh_buffer();
                 if (*(gpio_ptr) != gpio_previous && count >= 500)
                 {
                     count = 0;
@@ -101,14 +112,17 @@ int main(void)
             while (count < 600)
             {
                 startTimer();
-                lightDisplay(1);
+                lightDisplay(0);
                 count++;
+                LCD_text(lights_off, 0);
+                refresh_buffer();
 
                 if (*(gpio_ptr) != gpio_previous && count >= 500)
                 {
                     count = 0;
                 }
             }
+            // Initialize LCD21
         }
     }
 }
