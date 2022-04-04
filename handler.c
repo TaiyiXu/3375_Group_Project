@@ -1,10 +1,9 @@
 #include "address_map_arm.h"
 #include "lcd_driver.h"
 #include "lcd_graphic.h"
+#include <stdio.h>
 
 #define GPIO_BASE 0xFF200060
-#define HEX3_HEX0_BASE 0XFF200020
-#define HEX5_HEX4_BASE 0XFF200030
 #define HERTZ 2000000 // the timer is 200MHZ but it's too slow
 #define SEVEN_SEGMENT_DISPLAY_BASE 0xFF200020
 
@@ -15,6 +14,7 @@ volatile unsigned int *const seven_segment_display_ptr = (unsigned int *)SEVEN_S
 
 char lights_on[13] = "Lights On \0";
 char lights_off[13] = "Lights Off\0";
+char text[20];
 // timer////////////////////////////////////////////////////////////////
 
 typedef struct armTimer
@@ -48,8 +48,8 @@ void startTimer()
 
 char getRemainTime(int count)
 { // getting the seconds of how many time are left until the light turn
-    char remainTime = 600 - count;
-    return remainTime;
+    sprintf(text, "%d", count);
+    return 1;
 }
 
 // PIR////////////////////////////////////////////////////////////////
@@ -79,6 +79,8 @@ void lightDisplay(int value)
 int main(void)
 {
     *(gpio_ptr + 1) = 0; // enbale the input for GPIO
+
+    // Initialize LCD21
     init_spim0();
     init_lcd();
     clear_screen();
@@ -97,7 +99,8 @@ int main(void)
                 lightDisplay(1);
                 count++;
                 LCD_text(lights_on, 0);
-                LCD_text(getRemainTime(count), 1);
+                getRemainTime(count);
+                LCD_text(text, 1);
                 refresh_buffer();
                 if (*(gpio_ptr) != gpio_previous && count >= 500)
                 {
@@ -107,21 +110,20 @@ int main(void)
         }
         else
         {
-
             while (count < 600)
             {
                 startTimer();
                 lightDisplay(0);
                 count++;
                 LCD_text(lights_off, 0);
+                getRemainTime(count);
+                LCD_text(text, 1);
                 refresh_buffer();
-
                 if (*(gpio_ptr) != gpio_previous && count >= 500)
                 {
                     count = 0;
                 }
             }
-            // Initialize LCD21
         }
     }
 }
