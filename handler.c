@@ -3,15 +3,12 @@
 #include "lcd_graphic.h"
 
 #define GPIO_BASE 0xFF200060
-#define HEX3_HEX0_BASE 0XFF200020
-#define HEX5_HEX4_BASE 0XFF200030
 #define HERTZ 1000000 // the timer is 200MHZ but it's too slow
 #define SEVEN_SEGMENT_DISPLAY_BASE 0xFF200020
 
 volatile unsigned int *const hex3_hex0_ptr = (unsigned int *)HEX3_HEX0_BASE;
 volatile unsigned int *const hex5_hex4_ptr = (unsigned int *)HEX5_HEX4_BASE;
 volatile unsigned int *const gpio_ptr = (unsigned int *)GPIO_BASE;
-volatile unsigned int *const seven_segment_display_ptr = (unsigned int *)SEVEN_SEGMENT_DISPLAY_BASE;
 volatile unsigned int *const seven_segment_display_ptr = (unsigned int *)SEVEN_SEGMENT_DISPLAY_BASE;
 
 char lights_on[13] = "Lights On \0";
