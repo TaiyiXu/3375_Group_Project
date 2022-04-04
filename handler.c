@@ -4,7 +4,7 @@
 #include <stdio.h>
 
 #define GPIO_BASE 0xFF200060
-#define HERTZ 2000000 // the timer is 200MHZ but it's too slow
+#define _MHz 1000000
 #define SEVEN_SEGMENT_DISPLAY_BASE 0xFF200020
 
 volatile unsigned int *const hex3_hex0_ptr = (unsigned int *)HEX3_HEX0_BASE;
@@ -16,7 +16,7 @@ char lights_on[13] = "Lights On \0";
 char lights_off[13] = "Lights Off\0";
 char text[20];
 
-int switchCount = 0;
+volatile int count = 0;
 // timer////////////////////////////////////////////////////////////////
 
 typedef struct armTimer
@@ -31,9 +31,9 @@ typedef struct armTimer
 
 armTimer *timer = (armTimer *)0xFFFEC600; // creating a armTimer object called timer
 
-void setTimer(int interval)
+void set_timer(int interval)
 {
-    timer->load = HERTZ; // should be count to 1 second
+    timer->load = interval * _MHz;
 }
 
 int readSwitch()
@@ -42,21 +42,22 @@ int readSwitch()
     return (*switchPointer) & 0x01;
 }
 
-void startTimer()
+void start_timer()
 {
-    timer->control = 3 + (1 << 8); // write 011 to the enable continue and interrupt
-    timer->status = 1;             // set the time-out flag to 0
+    // 011 = 0x3, Enable timer, continue mode, 100 MHz now
+    timer->control = 3 + (1 << 8);
+    timer->status = 1;
 }
 
-int checkTimer()
+int check_timer()
 {
-    int current = timer->count;
-    return timer->load > current;
+    volatile int current_count = timer->count;
+    return timer->load > current_count;
 }
 
-void waitForTime()
+void wait_for_timer()
 {
-    while (checkTimer())
+    while (check_timer())
     {
     }
 }
@@ -90,6 +91,11 @@ void lightDisplay(int value)
     }
 }
 
+void updateCount()
+{
+    count++;
+}
+
 // main function////////////////////////////////////////////////////////
 int main(void)
 {
@@ -102,45 +108,31 @@ int main(void)
 
     while (1)
     {
-        int count = 0;
-
+        int gpio_previous = readSwitch();
 
         if (readSwitch())
         {
-            int previousSwitchCount = switchCount;
-            switchCount ++;
-            while (count < 600)
-            {
-                startTimer();
-                lightDisplay(1);
-                waitForTime();
-                count++;
-                LCD_text(lights_on, 0);
-                getRemainTime(count);
-                LCD_text(text, 1);
-                refresh_buffer();
-                if (switchCount!=previousSwitchCount && count >= 500)
-                {
-                    count = 0;
-                    break;
-                }
-            }
+            set_timer(1);
+            start_timer();
+            lightDisplay(1);
+            updateCount(count);
+            getRemainTime(count);
+            LCD_text(lights_on, 0);
+            LCD_text(text, 1);
+            refresh_buffer();
+            wait_for_timer();
         }
         else
         {
-            int previousSwitchCount = switchCount;
-            while (count < 600)
-            {
-                startTimer();
-                lightDisplay(0);
-                waitForTime();
-                count++;
-                LCD_text(lights_off, 0);
-                getRemainTime(count);
-                LCD_text(text, 1);
-                refresh_buffer();
-                if(switchCount!=previousSwitchCount && count >= 500)
-            }
+            set_timer(1);
+            start_timer();
+            lightDisplay(0);
+            updateCount(count);
+            getRemainTime(count);
+            LCD_text(lights_off, 0);
+            LCD_text(text, 1);
+            refresh_buffer();
+            wait_for_timer();
         }
     }
 }
