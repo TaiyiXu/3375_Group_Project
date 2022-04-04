@@ -1,9 +1,8 @@
 #define GPIO_BASE 0xFF200060
 #define HEX3_HEX0_BASE 0XFF200020
 #define HEX5_HEX4_BASE 0XFF200030
-#define HERTZ 1000000 // the timer is 200MHZ but it's too slow
+#define HERTZ 2000000 // the timer is 200MHZ but it's too slow
 #define SEVEN_SEGMENT_DISPLAY_BASE 0xFF200020
-
 
 volatile unsigned int *const hex3_hex0_ptr = (unsigned int *)HEX3_HEX0_BASE;
 volatile unsigned int *const hex5_hex4_ptr = (unsigned int *)HEX5_HEX4_BASE;
@@ -26,7 +25,7 @@ armTimer *timer = (armTimer *)0xFFFEC600; // creating a armTimer object called t
 
 void setTimer(int interval)
 {
-    timer->load = interval * HERTZ; // should be 10 mins
+    timer->load = HERTZ; // should be count to 1 second
 }
 
 void startTimer()
@@ -58,16 +57,45 @@ void lightDisplay(int value)
     }
 }
 
+// main function////////////////////////////////////////////////////////
 int main(void)
 {
     *(gpio_ptr + 1) = 0; // enbale the input for GPIO
 
-    while(1){
-        if(*(gpio_ptr)){
-            lightDisplay(1);
+    while (1)
+    {
+        int count = 0;
+        int gpio_previous = *(gpio_ptr);
+
+        if (*(gpio_ptr))
+        {
+
+            while (count < 600)
+            {
+                startTimer();
+                lightDisplay(1);
+                count++;
+
+                if (*(gpio_ptr) != gpio_previous && count >= 500)
+                {
+                    count = 0;
+                }
+            }
         }
-        else{
-            lightDisplay(0);
+        else
+        {
+
+            while (count < 600)
+            {
+                startTimer();
+                lightDisplay(1);
+                count++;
+
+                if (*(gpio_ptr) != gpio_previous && count >= 500)
+                {
+                    count = 0;
+                }
+            }
         }
     }
 }
