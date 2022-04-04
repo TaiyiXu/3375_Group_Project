@@ -1,3 +1,7 @@
+#include "address_map_arm.h"
+#include "lcd_driver.h"
+#include "lcd_graphic.h"
+
 #define GPIO_BASE 0xFF200060
 #define HEX3_HEX0_BASE 0XFF200020
 #define HEX5_HEX4_BASE 0XFF200030
@@ -9,6 +13,9 @@ volatile unsigned int *const hex5_hex4_ptr = (unsigned int *)HEX5_HEX4_BASE;
 volatile unsigned int *const gpio_ptr = (unsigned int *)GPIO_BASE;
 volatile unsigned int *const seven_segment_display_ptr = (unsigned int *)SEVEN_SEGMENT_DISPLAY_BASE;
 volatile unsigned int *const seven_segment_display_ptr = (unsigned int *)SEVEN_SEGMENT_DISPLAY_BASE;
+
+char lights_on[13] = "Lights On \0";
+char lights_off[13] = "Lights Off\0";
 // timer////////////////////////////////////////////////////////////////
 
 typedef struct armTimer
@@ -26,6 +33,12 @@ armTimer *timer = (armTimer *)0xFFFEC600; // creating a armTimer object called t
 void setTimer(int interval)
 {
     timer->load = HERTZ; // should be count to 1 second
+}
+
+int readSwitch()
+{
+    volatile int *switchPointer = SW_BASE;
+    return (*switchPointer) & 0x01;
 }
 
 void startTimer()
