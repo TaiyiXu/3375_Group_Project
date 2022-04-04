@@ -35,6 +35,12 @@ void setTimer(int interval)
     timer->load = interval * HERTZ; // should be 10 mins
 }
 
+int readSwitch()
+{
+    volatile int *switchPointer = SW_BASE;
+    return (*switchPointer) & 0x01;
+}
+
 void startTimer()
 {
     timer->control = 3 + (1 << 8); // write 011 to the enable continue and interrupt
@@ -75,7 +81,7 @@ int main(void)
 
     while (1)
     {
-        if (*(gpio_ptr))
+        if (readSwitch())
         {
             lightDisplay(1);
             LCD_text(lights_on, 0);
