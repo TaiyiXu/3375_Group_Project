@@ -46,6 +46,19 @@ void startTimer()
     timer->status = 1;             // set the time-out flag to 0
 }
 
+int checkTimer()
+{
+    int current = timer->count;
+    return timer->load > current;
+}
+
+void waitForTime()
+{
+    while (checkTimer())
+    {
+    }
+}
+
 char getRemainTime(int count)
 { // getting the seconds of how many time are left until the light turn
     char remainTime = 600 - count;
@@ -95,6 +108,7 @@ int main(void)
             {
                 startTimer();
                 lightDisplay(1);
+                waitForTime();
                 count++;
                 LCD_text(lights_on, 0);
                 LCD_text(getRemainTime(count), 1);
@@ -112,6 +126,7 @@ int main(void)
             {
                 startTimer();
                 lightDisplay(0);
+                waitForTime();
                 count++;
                 LCD_text(lights_off, 0);
                 refresh_buffer();
