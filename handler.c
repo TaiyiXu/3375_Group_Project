@@ -15,6 +15,8 @@ volatile unsigned int *const seven_segment_display_ptr = (unsigned int *)SEVEN_S
 
 char lights_on[13] = "Lights On \0";
 char lights_off[13] = "Lights Off\0";
+
+int switchCount = 0;
 // timer////////////////////////////////////////////////////////////////
 
 typedef struct armTimer
@@ -99,11 +101,12 @@ int main(void)
     while (1)
     {
         int count = 0;
-        int gpio_previous = *(gpio_ptr);
 
-        if (*(gpio_ptr))
+
+        if (readSwitch())
         {
-
+            int previousSwitchCount = switchCount;
+            switchCount ++;
             while (count < 600)
             {
                 startTimer();
@@ -113,15 +116,16 @@ int main(void)
                 LCD_text(lights_on, 0);
                 LCD_text(getRemainTime(count), 1);
                 refresh_buffer();
-                if (*(gpio_ptr) != gpio_previous && count >= 500)
+                if (switchCount!=previousSwitchCount && count >= 500)
                 {
                     count = 0;
+                    break;
                 }
             }
         }
         else
         {
-
+            int previousSwitchCount = switchCount;
             while (count < 600)
             {
                 startTimer();
@@ -130,10 +134,9 @@ int main(void)
                 count++;
                 LCD_text(lights_off, 0);
                 refresh_buffer();
-
-                if (*(gpio_ptr) != gpio_previous && count >= 500)
+                if(switchCount!=previousSwitchCount && count >= 500)
                 {
-                    count = 0;
+                    break;
                 }
             }
             // Initialize LCD21
