@@ -4,11 +4,12 @@
 #define HERTZ 1000000 // the timer is 200MHZ but it's too slow
 #define SEVEN_SEGMENT_DISPLAY_BASE 0xFF200020
 
+
 volatile unsigned int *const hex3_hex0_ptr = (unsigned int *)HEX3_HEX0_BASE;
 volatile unsigned int *const hex5_hex4_ptr = (unsigned int *)HEX5_HEX4_BASE;
 volatile unsigned int *const gpio_ptr = (unsigned int *)GPIO_BASE;
 volatile unsigned int *const seven_segment_display_ptr = (unsigned int *)SEVEN_SEGMENT_DISPLAY_BASE;
-
+volatile unsigned int *const seven_segment_display_ptr = (unsigned int *)SEVEN_SEGMENT_DISPLAY_BASE;
 // timer////////////////////////////////////////////////////////////////
 
 typedef struct armTimer
@@ -34,7 +35,6 @@ void startTimer()
     timer->status = 1;             // set the time-out flag to 0
 }
 
-
 // PIR////////////////////////////////////////////////////////////////
 
 // LEDS////////////////////////////////////////////////////////////////
@@ -55,5 +55,19 @@ void lightDisplay(int value)
     else
     {
         *seven_segment_display_ptr = statusTable[1]; // display oN.
+    }
+}
+
+int main(void)
+{
+    *(gpio_ptr + 1) = 0; // enbale the input for GPIO
+
+    while(1){
+        if(*(gpio_ptr)){
+            lightDisplay(1);
+        }
+        else{
+            lightDisplay(0);
+        }
     }
 }
