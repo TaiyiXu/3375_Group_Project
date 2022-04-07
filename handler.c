@@ -4,37 +4,21 @@
 #include <stdio.h>
 
 #define GPIO_BASE 0xFF200060
-#define _MHz 1000000
+#define _200MHz 200000000
 #define SEVEN_SEGMENT_DISPLAY_BASE 0xFF200020
 
 volatile unsigned int *const hex3_hex0_ptr = (unsigned int *)HEX3_HEX0_BASE;
 volatile unsigned int *const hex5_hex4_ptr = (unsigned int *)HEX5_HEX4_BASE;
 volatile unsigned int *const gpio_ptr = (unsigned int *)GPIO_BASE;
 volatile unsigned int *const seven_segment_display_ptr = (unsigned int *)SEVEN_SEGMENT_DISPLAY_BASE;
+volatile int *MPcore_private_timer_ptr = (int *)MPCORE_PRIV_TIMER; // timer address
+volatile unsigned int *const key_base = (unsigned int *)KEY_BASE;
 
 char lights_on[13] = "Lights On \0";
 char lights_off[13] = "Lights Off\0";
 char text[20];
 
-volatile int count = 0;
-// timer////////////////////////////////////////////////////////////////
-
-typedef struct armTimer
-{ // creating a defined data type containning these properties
-
-    int load;    // max count
-    int count;   // cuurent count
-    int control; // control register for the timer
-    int status;  // flag of the timer status(is timeout or not)
-
-} armTimer;
-
-armTimer *timer = (armTimer *)0xFFFEC600; // creating a armTimer object called timer
-
-void set_timer(int interval)
-{
-    timer->load = interval * _MHz;
-}
+volatile int actual_count = 20;
 
 int readSwitch()
 {
@@ -42,29 +26,32 @@ int readSwitch()
     return (*switchPointer) & 0x01;
 }
 
-void start_timer()
-{
-    // 011 = 0x3, Enable timer, continue mode, 100 MHz now
-    timer->control = 3 + (1 << 8);
-    timer->status = 1;
-}
-
-int check_timer()
-{
-    volatile int current_count = timer->count;
-    return timer->load > current_count;
-}
-
-void wait_for_timer()
-{
-    while (check_timer())
-    {
-    }
-}
-
-char getRemainTime(int count)
+int getRemainTime()
 { // getting the seconds of how many time are left until the light turn
-    sprintf(text, "%d", count);
+    int arrayLength = 0;
+    int value = actual_count;
+
+    while (value != 0)
+    {
+        value /= 10;
+        arrayLength++;
+    }
+
+    switch (arrayLength)
+    {
+    case 3:
+        sprintf(text, "Off after %d", actual_count);
+        break;
+    case 2:
+        sprintf(text, "Off after 0%d", actual_count);
+        break;
+    case 1:
+        sprintf(text, "Off after 00%d", actual_count);
+        break;
+    default:
+        break;
+    }
+    actual_count--;
     return 1;
 }
 
@@ -91,15 +78,23 @@ void lightDisplay(int value)
     }
 }
 
-void updateCount()
+// timer////////////////////////////////////////////////////////////////
+void private_timer(int counter)
 {
-    count++;
+    *(MPcore_private_timer_ptr) = counter;   // write to timer load register
+    *(MPcore_private_timer_ptr + 2) = 0b011; // mode = 1 (auto), enable =
+    while (*(MPcore_private_timer_ptr + 3) == 0)
+        ;                                // wait for timer to expire
+    *(MPcore_private_timer_ptr + 3) = 1; // reset timer flag bit
+    return;
 }
 
 // main function////////////////////////////////////////////////////////
 int main(void)
 {
     *(gpio_ptr + 1) = 0; // enbale the input for GPIO
+    int run_once = 1;
+    int can_count = 0;
 
     // Initialize LCD21
     init_spim0();
@@ -108,31 +103,38 @@ int main(void)
 
     while (1)
     {
-        int gpio_previous = readSwitch();
-
-        if (readSwitch())
+        if (*key_base)
         {
-            set_timer(1);
-            start_timer();
+            actual_count = 20;
+            can_count = 1;
+        }
+
+        if (actual_count == 0)
+        {
+            can_count = 0;
+        }
+
+        if (can_count)
+        {
+            run_once = 1;
             lightDisplay(1);
-            updateCount(count);
-            getRemainTime(count);
+            getRemainTime();
             LCD_text(lights_on, 0);
             LCD_text(text, 1);
             refresh_buffer();
-            wait_for_timer();
+            private_timer(_200MHz);
         }
         else
         {
-            set_timer(1);
-            start_timer();
+            if (run_once)
+            {
+                clear_screen();
+                run_once = 0;
+            }
+            *(MPcore_private_timer_ptr + 2) = 0;
             lightDisplay(0);
-            updateCount(count);
-            getRemainTime(count);
             LCD_text(lights_off, 0);
-            LCD_text(text, 1);
             refresh_buffer();
-            wait_for_timer();
         }
     }
 }
